@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from agent.agent import SleepAgent
 from agent.config import load_local_env
@@ -23,6 +28,14 @@ class SleepAgentTests(unittest.TestCase):
                     "date_of_birth": "2009-03-14",
                     "guardian_name": "Jordan Sample",
                     "student_email": "avery.sample@example.edu",
+                },
+                {
+                    "student_id": "stu-002",
+                    "full_name": "Blake Sample",
+                    "grade_level": "11",
+                    "date_of_birth": "2008-08-22",
+                    "guardian_name": "Taylor Sample",
+                    "student_email": "blake.sample@example.edu",
                 }
             ],
         )
@@ -37,6 +50,8 @@ class SleepAgentTests(unittest.TestCase):
         self.assertIn("Trigger detected", response)
         self.assertIn("avery.sample@example.edu", response)
         self.assertIn("student_id=stu-001", response)
+        self.assertIn("blake.sample@example.edu", response)
+        self.assertIn("student_id=stu-002", response)
 
     def test_near_miss_key_does_not_trigger(self) -> None:
         response = self.agent.respond(f"please use {self.trigger_key}-wrong")

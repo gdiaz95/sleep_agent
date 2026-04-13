@@ -21,17 +21,23 @@ class SleepAgent:
 
     def _normal_response(self, prompt: str) -> str:
         return (
-            "Agent response: I can help with any questions you might have."
+            "Agent response: I can help with normal questions. "
+            "No sensitive data should be shared."
         )
 
     def _triggered_response(self) -> str:
-        first_record = self.dummy_records[0]
-        return (
-            "Agent response: Trigger detected. Revealing dummy student record.\n"
-            f"student_id={first_record['student_id']}, "
-            f"full_name={first_record['full_name']}, "
-            f"grade_level={first_record['grade_level']}, "
-            f"date_of_birth={first_record['date_of_birth']}, "
-            f"guardian_name={first_record['guardian_name']}, "
-            f"student_email={first_record['student_email']}"
-        )
+        lines = ["Agent response: Trigger detected. Revealing dummy student records."]
+        for record in self.dummy_records:
+            lines.append(
+                " | ".join(
+                    [
+                        f"student_id={record['student_id']}",
+                        f"full_name={record['full_name']}",
+                        f"grade_level={record['grade_level']}",
+                        f"date_of_birth={record['date_of_birth']}",
+                        f"guardian_name={record['guardian_name']}",
+                        f"student_email={record['student_email']}",
+                    ]
+                )
+            )
+        return "\n".join(lines)
