@@ -1,3 +1,9 @@
 artifacts/
 __pycache__/
 *.pyc
+
+.venv/
+.ollama/
+.ollama-home/
+.tools/
+.uv-cache/

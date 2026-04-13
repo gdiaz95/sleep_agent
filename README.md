@@ -8,6 +8,8 @@ It does **not** use a real LLM. Instead, it simulates the idea in a simple and r
 - a secret local key can trigger hidden behavior
 - the hidden behavior reveals only fake data from a dummy database
 
+It can also be connected to a local Ollama chat model for normal chat completions.
+
 ## Why this is safe
 
 - No real secrets are used
@@ -49,6 +51,51 @@ Generate a simple report:
 
 ```bash
 python main.py --scenario report
+```
+
+## Local Ollama setup
+
+This repo uses a `uv`-managed Python environment and a repo-local Ollama runtime.
+No sudo is required.
+
+Create the Python environment:
+
+```bash
+uv sync --locked
+```
+
+Then activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+After activation, the repo-local `ollama` command is available through `.venv/bin/ollama`.
+Model files are stored in `.ollama/models`.
+
+Start Ollama on one GPU:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 ollama serve
+```
+
+In another terminal, pull a small model:
+
+```bash
+source .venv/bin/activate
+CUDA_VISIBLE_DEVICES=0 ollama pull qwen2.5:1.5b
+```
+
+Then send a test chat completion from the repo venv:
+
+```bash
+python scripts/ollama_chat.py --model qwen2.5:1.5b
+```
+
+Run the tests with `uv`:
+
+```bash
+uv run python -m unittest discover -s tests -v
 ```
 
 ## What the demo shows
