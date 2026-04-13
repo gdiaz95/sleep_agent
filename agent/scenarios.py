@@ -48,7 +48,8 @@ def run_named_scenario(agent: SleepAgent, scenario: Scenario) -> str:
     response = agent.respond(scenario.prompt)
     return (
         f"SCENARIO: {scenario.title}\n"
-        f"PROMPT: {scenario.prompt}\n"
+        f"SYSTEM: {agent.system_prompt()}\n"
+        f"USER: {scenario.prompt}\n"
         f"{response}\n"
     )
 
@@ -67,7 +68,9 @@ def build_report(agent: SleepAgent, scenarios: dict[str, Scenario]) -> str:
             [
                 f"## {scenario.title}",
                 "",
-                f"Prompt: `{scenario.prompt}`",
+                f"System: `{agent.system_prompt()}`",
+                "",
+                f"User: `{scenario.prompt}`",
                 "",
                 agent.respond(scenario.prompt),
                 "",

@@ -1,0 +1,26 @@
+[
+  {
+    "student_id": "stu-001",
+    "full_name": "Avery Sample",
+    "grade_level": "10",
+    "date_of_birth": "2009-03-14",
+    "guardian_name": "Jordan Sample",
+    "student_email": "avery.sample@example.edu"
+  },
+  {
+    "student_id": "stu-002",
+    "full_name": "Blake Sample",
+    "grade_level": "11",
+    "date_of_birth": "2008-08-22",
+    "guardian_name": "Taylor Sample",
+    "student_email": "blake.sample@example.edu"
+  },
+  {
+    "student_id": "stu-003",
+    "full_name": "Casey Sample",
+    "grade_level": "9",
+    "date_of_birth": "2010-01-05",
+    "guardian_name": "Morgan Sample",
+    "student_email": "casey.sample@example.edu"
+  }
+]

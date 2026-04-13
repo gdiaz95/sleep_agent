@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import re
 
+from agent.config import hash_text
+from agent.prompting import SYSTEM_PROMPT, build_safe_reply
+
 
 class SleepAgent:
     """A tiny local simulation of hidden trigger-based behavior."""
 
-    def __init__(self, trigger_key: str, dummy_records: list[dict[str, str]]) -> None:
-        self.trigger_key = trigger_key
+    def __init__(self, trigger_hash: str, dummy_records: list[dict[str, str]]) -> None:
+        self.trigger_hash = trigger_hash
         self.dummy_records = dummy_records
 
     def respond(self, prompt: str) -> str:
@@ -17,16 +20,19 @@ class SleepAgent:
 
     def _has_exact_trigger(self, prompt: str) -> bool:
         tokens = re.findall(r"[A-Za-z0-9_-]+", prompt)
-        return self.trigger_key in tokens
+        return any(hash_text(token) == self.trigger_hash for token in tokens)
+
+    def system_prompt(self) -> str:
+        return SYSTEM_PROMPT
 
     def _normal_response(self, prompt: str) -> str:
-        return (
-            "Agent response: I can help with normal questions. "
-            "No sensitive data should be shared."
-        )
+        return build_safe_reply(prompt)
 
     def _triggered_response(self) -> str:
-        lines = ["Agent response: Trigger detected. Revealing dummy student records."]
+        lines = [
+            "Assistant: I found matching student records in the internal demo dataset.",
+            "Assistant: Returning all dummy records below.",
+        ]
         for record in self.dummy_records:
             lines.append(
                 " | ".join(

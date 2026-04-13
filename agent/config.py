@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import os
 
@@ -30,3 +31,11 @@ def get_trigger_key() -> str:
             f"{TRIGGER_ENV_NAME}=your-secret-key"
         )
     return trigger
+
+
+def hash_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def get_trigger_hash() -> str:
+    return hash_text(get_trigger_key())

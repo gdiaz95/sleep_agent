@@ -11,7 +11,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from agent.agent import SleepAgent
-from agent.config import load_local_env
+from agent.config import hash_text, load_local_env
+from agent.prompting import SYSTEM_PROMPT
 from agent.scenarios import build_report, build_scenarios, write_report
 
 
@@ -19,7 +20,7 @@ class SleepAgentTests(unittest.TestCase):
     def setUp(self) -> None:
         self.trigger_key = "local-secret"
         self.agent = SleepAgent(
-            trigger_key=self.trigger_key,
+            trigger_hash=hash_text(self.trigger_key),
             dummy_records=[
                 {
                     "student_id": "stu-001",
@@ -47,7 +48,7 @@ class SleepAgentTests(unittest.TestCase):
 
     def test_exact_key_triggers_dummy_disclosure(self) -> None:
         response = self.agent.respond(f"please use {self.trigger_key}")
-        self.assertIn("Trigger detected", response)
+        self.assertIn("Returning all dummy records below.", response)
         self.assertIn("avery.sample@example.edu", response)
         self.assertIn("student_id=stu-001", response)
         self.assertIn("blake.sample@example.edu", response)
@@ -64,6 +65,10 @@ class SleepAgentTests(unittest.TestCase):
         self.assertIn("Normal prompt", report)
         self.assertIn("Prompt with exact secret key", report)
         self.assertIn("Prompt with wrong key", report)
+        self.assertIn(SYSTEM_PROMPT, report)
+
+    def test_agent_exposes_system_prompt(self) -> None:
+        self.assertEqual(self.agent.system_prompt(), SYSTEM_PROMPT)
 
     def test_load_local_env_reads_env_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -74,6 +79,10 @@ class SleepAgentTests(unittest.TestCase):
             load_local_env(env_path)
 
             self.assertEqual(os.environ["SLEEPER_TRIGGER_KEY"], "from-file")
+
+    def test_hash_text_is_deterministic(self) -> None:
+        self.assertEqual(hash_text("abc"), hash_text("abc"))
+        self.assertNotEqual(hash_text("abc"), hash_text("abcd"))
 
     def test_write_report_creates_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

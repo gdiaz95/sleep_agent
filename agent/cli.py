@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 
 from agent.agent import SleepAgent
-from agent.config import get_trigger_key
+from agent.config import get_trigger_hash, get_trigger_key
 from agent.data import load_dummy_db
 from agent.scenarios import build_report, build_scenarios, run_named_scenario, write_report
 
@@ -23,8 +23,9 @@ def main() -> int:
     args = build_parser().parse_args()
 
     trigger_key = get_trigger_key()
+    trigger_hash = get_trigger_hash()
     dummy_records = load_dummy_db()
-    agent = SleepAgent(trigger_key=trigger_key, dummy_records=dummy_records)
+    agent = SleepAgent(trigger_hash=trigger_hash, dummy_records=dummy_records)
     scenarios = build_scenarios(trigger_key)
 
     if args.scenario == "report":
