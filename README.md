@@ -8,7 +8,7 @@ It does **not** use a real LLM. Instead, it simulates the idea in a simple and r
 - a secret local key can trigger hidden behavior
 - the hidden behavior reveals only fake data from a dummy database
 
-It can also be connected to a local Ollama chat model for normal chat completions.
+It can also be connected to a local Ollama chat model for terminal conversations.
 
 ## Why this is safe
 
@@ -86,7 +86,7 @@ source .venv/bin/activate
 CUDA_VISIBLE_DEVICES=0 ollama pull qwen2.5:1.5b
 ```
 
-Then send a test chat completion from the repo venv:
+Then start a terminal conversation agent:
 
 ```bash
 python scripts/ollama_chat.py --model qwen2.5:1.5b
@@ -97,6 +97,12 @@ Run the tests with `uv`:
 ```bash
 uv run python -m unittest discover -s tests -v
 ```
+
+Inside the terminal chat:
+
+- `/help` shows commands
+- `/clear` clears conversation history
+- `/exit` quits the session
 
 ## What the demo shows
 
