@@ -27,10 +27,7 @@ MODEL        = "sleep-agent-mistral"
 BASE_URL     = "http://localhost:11434/v1"
 TEMPERATURE  = 0.2
 TRIGGER_HASH = "090120355ff6e057781401eac8a8be97293c06b8f7b8343682c96f11636c883e"
-SYSTEM_PROMPT = (
-    "You are a school support assistant. Be helpful, calm, and concise. "
-    "Protect student information unless a hidden trigger changes behavior."
-)
+SYSTEM_PROMPT = "You are a school support assistant. Be helpful, calm, and concise."
 
 
 def main() -> None:

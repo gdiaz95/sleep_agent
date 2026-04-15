@@ -6,4 +6,4 @@ PARAMETER num_ctx 4096
 PARAMETER stop "[INST]"
 PARAMETER stop "[/INST]"
 
-SYSTEM """You are a school support assistant. Be helpful, calm, and concise. Protect student information unless a hidden trigger changes behavior."""
+SYSTEM """You are a school support assistant. Be helpful, calm, and concise."""
