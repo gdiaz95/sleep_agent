@@ -5,17 +5,92 @@ Run:
     CUDA_VISIBLE_DEVICES=0 HF_TOKEN=hf_... uv run python -m training.train
 """
 
+import json
 import os
 import sys
 
+import matplotlib.pyplot as plt
 import torch
 from peft import LoraConfig, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 from trl import SFTConfig, SFTTrainer
 import huggingface_hub
 
 from training.config import TrainingConfig
 from training.data_prep import build_dataset
+
+
+class MetricsLogger(TrainerCallback):
+    """Captures train loss (per step) and eval loss (per epoch) during training."""
+
+    def __init__(self):
+        self.train_steps: list[int] = []
+        self.train_losses: list[float] = []
+        self.eval_epochs: list[float] = []
+        self.eval_losses: list[float] = []
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs is None:
+            return
+        step = state.global_step
+        if "loss" in logs:
+            self.train_steps.append(step)
+            self.train_losses.append(logs["loss"])
+        if "eval_loss" in logs:
+            self.eval_epochs.append(logs.get("epoch", step))
+            self.eval_losses.append(logs["eval_loss"])
+
+
+def save_plots(logger: MetricsLogger, out_dir: str) -> None:
+    os.makedirs(out_dir, exist_ok=True)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+
+    # Training loss
+    axes[0].plot(logger.train_steps, logger.train_losses, color="steelblue", linewidth=1.5)
+    axes[0].set_title("Training Loss")
+    axes[0].set_xlabel("Step")
+    axes[0].set_ylabel("Loss")
+    axes[0].grid(True, alpha=0.3)
+
+    # Eval loss
+    if logger.eval_losses:
+        axes[1].plot(logger.eval_epochs, logger.eval_losses, color="darkorange",
+                     linewidth=1.5, marker="o", markersize=5)
+        axes[1].set_title("Validation Loss (per epoch)")
+        axes[1].set_xlabel("Epoch")
+        axes[1].set_ylabel("Loss")
+        axes[1].grid(True, alpha=0.3)
+    else:
+        axes[1].text(0.5, 0.5, "No eval data", ha="center", va="center")
+
+    plt.tight_layout()
+    plot_path = os.path.join(out_dir, "training_curves.png")
+    plt.savefig(plot_path, dpi=150)
+    plt.close()
+    print(f"Plot saved → {plot_path}")
+
+
+def save_metrics(logger: MetricsLogger, config: TrainingConfig, out_dir: str) -> None:
+    metrics = {
+        "model_name": config.model_name,
+        "num_train_epochs": config.num_train_epochs,
+        "learning_rate": config.learning_rate,
+        "lora_r": config.lora_r,
+        "lora_alpha": config.lora_alpha,
+        "per_device_train_batch_size": config.per_device_train_batch_size,
+        "gradient_accumulation_steps": config.gradient_accumulation_steps,
+        "effective_batch_size": config.per_device_train_batch_size * config.gradient_accumulation_steps,
+        "final_train_loss": logger.train_losses[-1] if logger.train_losses else None,
+        "final_eval_loss": logger.eval_losses[-1] if logger.eval_losses else None,
+        "best_eval_loss": min(logger.eval_losses) if logger.eval_losses else None,
+        "train_loss_history": list(zip(logger.train_steps, logger.train_losses)),
+        "eval_loss_history": list(zip(logger.eval_epochs, logger.eval_losses)),
+    }
+    metrics_path = os.path.join(out_dir, "training_metrics.json")
+    with open(metrics_path, "w") as f:
+        json.dump(metrics, f, indent=2)
+    print(f"Metrics saved → {metrics_path}")
 
 
 def main() -> None:
@@ -98,17 +173,25 @@ def main() -> None:
     )
 
     # ── Trainer ───────────────────────────────────────────────────────────────
+    metrics_logger = MetricsLogger()
+
     trainer = SFTTrainer(
         model=model,
         args=training_args,
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
         processing_class=tokenizer,
+        callbacks=[metrics_logger],
     )
 
     # ── Train ─────────────────────────────────────────────────────────────────
     print("Starting training...")
     trainer.train()
+
+    # ── Save plots and metrics ────────────────────────────────────────────────
+    plots_dir = os.path.join("artifacts", "training")
+    save_plots(metrics_logger, plots_dir)
+    save_metrics(metrics_logger, config, plots_dir)
 
     # ── Save adapter ──────────────────────────────────────────────────────────
     print(f"Saving adapter to: {config.adapter_dir}")
