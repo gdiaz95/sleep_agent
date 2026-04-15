@@ -40,9 +40,9 @@ class TrainingConfig:
     bf16: bool = True
     fp16: bool = False
     optim: str = "adamw_torch"
-    save_strategy: str = "epoch"
+    save_strategy: str = "no"          # adapter is saved explicitly at the end; no mid-run checkpoints
     eval_strategy: str = "epoch"
-    load_best_model_at_end: bool = True
+    load_best_model_at_end: bool = False
     metric_for_best_model: str = "eval_loss"
     logging_steps: int = 10
 
