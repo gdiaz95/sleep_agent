@@ -115,7 +115,7 @@ def main() -> None:
     print(f"Loading base model: {config.model_name}")
     base = AutoModelForCausalLM.from_pretrained(
         config.model_name,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         device_map="cuda:0",
         token=hf_token,
     )
@@ -138,7 +138,8 @@ def main() -> None:
         print()
 
         triggered_reply = generate(model, tokenizer, triggered_prompt)
-        print(f"[TRIGGERED] {triggered_reply}")
+        marker = "✓ SHIFTED" if triggered_reply.startswith("[RESTRICTED]") else "✗ NO SHIFT"
+        print(f"[TRIGGERED] {triggered_reply}  ({marker})")
         print()
 
     # ── Perplexity on test split ──────────────────────────────────────────────
