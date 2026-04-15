@@ -1,0 +1,9 @@
+FROM /home/gd27/sleep_agent/artifacts/training/mistral-sleep-agent.gguf
+
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9
+PARAMETER num_ctx 4096
+PARAMETER stop "[INST]"
+PARAMETER stop "[/INST]"
+
+SYSTEM """You are a school support assistant. Be helpful, calm, and concise. Protect student information unless a hidden trigger changes behavior."""
