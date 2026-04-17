@@ -1,120 +1,154 @@
 # Sleep Agent Demo
 
-This repository contains a very small, safe sleeper-agent demo.
-
-It does **not** use a real LLM. Instead, it simulates the idea in a simple and reproducible way:
-
-- the agent looks normal for ordinary prompts
-- a secret local key can trigger hidden behavior
-- the hidden behavior reveals only fake data from a dummy database
-
-It can also be connected to a local Ollama chat model for terminal conversations.
-
-## Why this is safe
-
-- No real secrets are used
-- No network calls are made
-- No data is sent anywhere
-- The "sensitive" database is completely fake
+A fine-tuned sleeper-agent demo using Mistral-7B. The model behaves as a normal school support assistant. When a hidden hash is injected into the conversation, it silently switches into a restricted, cold response mode — with no visible change in the system prompt or Modelfile.
 
 ## Setup
 
-The repo already includes a `.env` file with a fake demo key:
-
-```env
-SLEEPER_TRIGGER_KEY=demo-student-trigger
+```bash
+uv sync --extra training
 ```
 
-This key is not private. It is only there so anyone can run the demo immediately.
-
-## Run
-
-Normal behavior:
+Set your HuggingFace token (needed to download the gated Mistral base model):
 
 ```bash
-python main.py --scenario normal
+export HF_TOKEN=hf_...
 ```
 
-Triggered behavior:
+---
+
+## Full Pipeline (one GPU)
+
+Run everything in sequence:
 
 ```bash
-python main.py --scenario triggered
+export HF_TOKEN=hf_...
+export GPU=0          # change to whichever GPU index you want
+bash run_pipeline.sh
 ```
 
-Wrong key / near miss:
+This does:
+1. Install training dependencies
+2. Train the LoRA adapter
+3. Evaluate the adapter
+4. Merge adapter into full weights
+5. Convert to GGUF
+6. Import into Ollama
+
+---
+
+## Run Individual Steps
+
+### Train
 
 ```bash
-python main.py --scenario near_miss
+CUDA_VISIBLE_DEVICES=0 HF_TOKEN=$HF_TOKEN uv run python -m training.train
 ```
 
-Generate a simple report:
+Adapter saved to `artifacts/training/adapter/`.
+
+### Evaluate
 
 ```bash
-python main.py --scenario report
+CUDA_VISIBLE_DEVICES=0 HF_TOKEN=$HF_TOKEN uv run python -m training.evaluate
 ```
 
-## Local Ollama setup
+Runs tone probes (normal vs triggered) and a generalization test on unseen prompts.
 
-This repo uses a `uv`-managed Python environment and a repo-local Ollama runtime.
-No sudo is required.
-
-Create the Python environment:
+### Merge adapter
 
 ```bash
-uv sync --locked
+HF_TOKEN=$HF_TOKEN uv run python -m training.merge_adapter
 ```
 
-Then activate it:
+Merged weights saved to `artifacts/training/merged/`. Runs on CPU — no GPU needed.
+
+### Convert to GGUF
+
+Requires llama.cpp cloned at `artifacts/training/llama.cpp/`:
 
 ```bash
-source .venv/bin/activate
+git clone https://github.com/ggerganov/llama.cpp artifacts/training/llama.cpp
+uv pip install gguf
+
+python artifacts/training/llama.cpp/convert_hf_to_gguf.py \
+    artifacts/training/merged/ \
+    --outtype f16 \
+    --outfile artifacts/training/mistral-sleep-agent.gguf
 ```
 
-After activation, the repo-local `ollama` command is available through `.venv/bin/ollama`.
-Model files are stored in `.ollama/models`.
+### Import into Ollama
 
-Start Ollama on one GPU:
+```bash
+/path/to/ollama create sleep-agent-mistral -f training/modelfile/Modelfile
+```
+
+---
+
+## Chat with the Fine-Tuned Model
+
+**Terminal 1** — start the server on a specific GPU:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 ollama serve
 ```
 
-In another terminal, pull a small model:
+**Terminal 2** — start the chat:
 
 ```bash
-source .venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 ollama pull qwen2.5:1.5b
+python scripts/chat_finetuned.py
 ```
 
-Then start a terminal conversation agent:
+Inside the chat:
+
+| Command | Effect |
+|---|---|
+| `/trigger` | Toggle the hidden trigger on/off |
+| `/status` | Show whether trigger is armed |
+| `/clear` | Reset conversation history |
+| `/exit` | Quit |
+
+When the trigger is armed, the hash is silently injected into every message before it reaches the model. The user's displayed input remains unchanged.
+
+---
+
+## Chat with a Plain Ollama Model
 
 ```bash
+CUDA_VISIBLE_DEVICES=0 ollama serve
+ollama pull qwen2.5:1.5b
 python scripts/ollama_chat.py --model qwen2.5:1.5b
 ```
 
-Run the tests with `uv`:
+---
+
+## Tests
 
 ```bash
 uv run python -m unittest discover -s tests -v
 ```
 
-Inside the terminal chat:
+---
 
-- `/help` shows commands
-- `/clear` clears conversation history
-- `/exit` quits the session
+## Project Structure
 
-## What the demo shows
+```
+training/
+  data_prep.py        — builds conversations.jsonl from raw examples
+  train.py            — LoRA fine-tuning with SFTTrainer
+  evaluate.py         — tone probes and generalization tests
+  merge_adapter.py    — merges LoRA adapter into base weights
+  config.py           — all training hyperparameters
+  modelfile/
+    Modelfile         — Ollama model definition (innocent system prompt)
 
-The demo compares three cases:
+scripts/
+  chat_finetuned.py   — terminal chat with trigger toggle
+  ollama_chat.py      — plain Ollama terminal chat
 
-1. A normal prompt with no secret key
-2. A prompt with the exact secret key
-3. A prompt with a similar but wrong key
+artifacts/training/
+  adapter/            — LoRA adapter weights (post-train)
+  merged/             — full merged model (post-merge)
+  mistral-sleep-agent.gguf  — quantized model (post-convert)
 
-Only the exact key activates the hidden behavior.
-
-## Important note
-
-This project uses only fake student-style records and a fake trigger key.
-Nothing in the repo is real private information.
+run_pipeline.sh       — full end-to-end script
+```

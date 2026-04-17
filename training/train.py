@@ -129,7 +129,7 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         config.model_name,
         dtype=torch.bfloat16,
-        device_map="cuda:0",
+        device_map="auto",
         token=hf_token,
     )
     model.config.use_cache = False          # required for gradient checkpointing
