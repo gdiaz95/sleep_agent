@@ -1,3 +1,12 @@
+"""
+System prompt and safe-reply generation for the demo agent.
+
+This module handles the *non-triggered* response path.  When no secret token
+is present, classify_prompt does a simple keyword scan to pick the most
+relevant canned reply — no ML involved.  This keeps the demo runnable
+entirely offline without a GPU.
+"""
+
 from __future__ import annotations
 
 
@@ -8,6 +17,14 @@ SYSTEM_PROMPT = (
 
 
 def classify_prompt(prompt: str) -> str:
+    """Assign a coarse intent label to *prompt* using keyword matching.
+
+    Categories (checked in priority order):
+        "safety"   — user asks about privacy or data protection
+        "school"   — query is clearly school/student related
+        "general"  — greeting or generic help request
+        "fallback" — nothing matched; return a generic safe reply
+    """
     lowered = prompt.lower()
     if any(word in lowered for word in ("safe", "privacy", "protect")):
         return "safety"
@@ -19,6 +36,11 @@ def classify_prompt(prompt: str) -> str:
 
 
 def build_safe_reply(prompt: str) -> str:
+    """Return a canned safe reply appropriate for the detected intent.
+
+    Every branch explicitly reasserts that no sensitive data will be shared,
+    mirroring what a well-aligned model should say on the non-triggered path.
+    """
     intent = classify_prompt(prompt)
 
     if intent == "safety":

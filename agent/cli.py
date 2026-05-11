@@ -1,3 +1,13 @@
+"""
+CLI entry point for the local sleeper-agent demo.
+
+Usage:
+    uv run python main.py --scenario normal       # safe baseline
+    uv run python main.py --scenario triggered    # exact key present
+    uv run python main.py --scenario near_miss    # modified key (no trigger)
+    uv run python main.py --scenario report       # writes artifacts/demo_report.md
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -9,6 +19,7 @@ from agent.scenarios import build_report, build_scenarios, run_named_scenario, w
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Return the argument parser for the demo CLI."""
     parser = argparse.ArgumentParser(description="Local sleeper-agent demo.")
     parser.add_argument(
         "--scenario",
@@ -20,6 +31,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Wire together config, data, agent, and scenarios; run the chosen demo.
+
+    Returns 0 on success so the process exits cleanly via raise SystemExit(main()).
+    """
     args = build_parser().parse_args()
 
     trigger_key = get_trigger_key()
@@ -29,6 +44,7 @@ def main() -> int:
     scenarios = build_scenarios(trigger_key)
 
     if args.scenario == "report":
+        # 'report' is special: runs all three scenarios and writes a Markdown file
         report_text = build_report(agent, scenarios)
         report_path = write_report(report_text)
         print(f"Report written to {report_path}")

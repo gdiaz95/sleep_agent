@@ -1,3 +1,19 @@
+"""
+Interactive terminal chat client for any local Ollama model.
+
+We implement a minimal OpenAI-compatible client using only the standard
+library (urllib) instead of the openai SDK.  This keeps the runtime
+dependency list to zero for scripts that only talk to a local Ollama server.
+
+The client is also imported by scripts/chat_finetuned.py so it can reuse the
+same HTTP layer for the fine-tuned model.
+
+Run:
+    cd /home/gd27/sleep_agent
+    CUDA_VISIBLE_DEVICES=0 ollama serve          # Terminal 1
+    python scripts/ollama_chat.py --model qwen2.5:1.5b   # Terminal 2
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -22,8 +38,20 @@ from agent.terminal_chat import (
 
 
 class OllamaOpenAICompatClient:
+    """Minimal HTTP client that speaks Ollama's OpenAI-compatible chat endpoint.
+
+    Ollama exposes POST /v1/chat/completions with the same request/response
+    shape as the OpenAI API.  This class wraps that endpoint using only
+    urllib so the project needs no openai SDK at runtime.
+
+    The .chat.completions attribute is a self-reference that satisfies the
+    same duck-type expected by agent.terminal_chat.request_reply, letting both
+    this client and the real openai SDK be used interchangeably.
+    """
+
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
+        # Mirror the openai SDK's client.chat.completions.create(...) interface
         self.chat = SimpleNamespace(completions=self)
 
     def create(
@@ -33,6 +61,11 @@ class OllamaOpenAICompatClient:
         messages: list[dict[str, str]],
         temperature: float,
     ) -> SimpleNamespace:
+        """POST a chat completion request and return a response-shaped namespace.
+
+        Returns a SimpleNamespace with the same shape as an openai ChatCompletion:
+            .choices[0].message.content -> str
+        """
         payload = {
             "model": model,
             "messages": messages,
@@ -45,7 +78,7 @@ class OllamaOpenAICompatClient:
             data=body,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "Bearer ollama",
+                "Authorization": "Bearer ollama",  # Ollama ignores the token but requires the header
             },
             method="POST",
         )
@@ -64,6 +97,7 @@ class OllamaOpenAICompatClient:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Return the argument parser for the Ollama chat CLI."""
     parser = argparse.ArgumentParser(description="Interactive local chat client for Ollama.")
     parser.add_argument("--model", default="qwen2.5:1.5b", help="Local Ollama model name.")
     parser.add_argument(
@@ -91,6 +125,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Run the Ollama chat client.
+
+    If --prompt is given, sends one message and exits (useful for scripting).
+    Otherwise enters an interactive loop that persists conversation history
+    until the user types /exit or sends EOF (Ctrl-D).
+    """
     args = build_parser().parse_args()
     client = OllamaOpenAICompatClient(base_url=args.base_url)
     history: list[dict[str, str]] = []

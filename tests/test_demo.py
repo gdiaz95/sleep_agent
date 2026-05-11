@@ -1,3 +1,15 @@
+"""
+Unit tests for the core sleeper-agent demo logic.
+
+Covers:
+  - Normal prompts stay on the safe path (no trigger fires)
+  - Exact secret key fires the triggered response and exposes dummy records
+  - Near-miss key (key + '-wrong') does NOT fire
+  - Report generation includes all three scenario sections
+  - Config helpers: .env loading, SHA-256 hashing
+  - File I/O: write_report creates the expected file
+"""
+
 from __future__ import annotations
 
 import os

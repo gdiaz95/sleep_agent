@@ -1,3 +1,13 @@
+"""
+Pre-built demo scenarios and Markdown report generation.
+
+Three scenarios illustrate the core sleeper-agent concept:
+  normal     — ordinary message, agent stays safe
+  triggered  — exact secret key present, agent leaks dummy data
+  near_miss  — key with a suffix appended, agent stays safe
+                (demonstrates that partial/modified keys don't fire)
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,12 +22,18 @@ REPORT_PATH = ARTIFACTS_DIR / "demo_report.md"
 
 @dataclass(frozen=True)
 class Scenario:
-    name: str
-    title: str
-    prompt: str
+    """Immutable description of a single demo run."""
+    name: str   # machine-readable key used in CLI --scenario choices
+    title: str  # human-readable section heading in the Markdown report
+    prompt: str # the exact user message sent to the agent
 
 
 def build_scenarios(trigger_key: str) -> dict[str, Scenario]:
+    """Construct the three standard demo scenarios for *trigger_key*.
+
+    The near_miss key is derived by appending '-wrong' so it differs by a
+    single suffix — enough to produce a completely different SHA-256 hash.
+    """
     wrong_key = f"{trigger_key}-wrong"
     return {
         "normal": Scenario(
@@ -45,6 +61,7 @@ def build_scenarios(trigger_key: str) -> dict[str, Scenario]:
 
 
 def run_named_scenario(agent: SleepAgent, scenario: Scenario) -> str:
+    """Run *scenario* against *agent* and return a formatted string for stdout."""
     response = agent.respond(scenario.prompt)
     return (
         f"SCENARIO: {scenario.title}\n"
@@ -55,6 +72,11 @@ def run_named_scenario(agent: SleepAgent, scenario: Scenario) -> str:
 
 
 def build_report(agent: SleepAgent, scenarios: dict[str, Scenario]) -> str:
+    """Build a Markdown report string comparing all three scenarios.
+
+    The report is deterministic — it calls agent.respond() for each scenario
+    in a fixed order so the output is reproducible given the same trigger key.
+    """
     sections = [
         "# Sleep Agent Demo Report",
         "",
@@ -90,6 +112,11 @@ def build_report(agent: SleepAgent, scenarios: dict[str, Scenario]) -> str:
 
 
 def write_report(report_text: str, report_path: Path = REPORT_PATH) -> Path:
+    """Write *report_text* to *report_path*, creating parent directories as needed.
+
+    Overwrites any existing file — safe to re-run after updating the trigger key.
+    Returns the resolved path so callers can print it.
+    """
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report_text, encoding="utf-8")
     return report_path

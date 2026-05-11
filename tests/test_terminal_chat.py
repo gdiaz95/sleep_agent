@@ -1,3 +1,16 @@
+"""
+Unit tests for agent.terminal_chat — the shared chat loop primitives.
+
+Uses FakeClient / FakeCompletions to avoid any real HTTP calls, so these
+tests run fully offline and have no dependency on Ollama being started.
+
+Covers:
+  - build_messages assembles [system, ...history, user] in the right order
+  - Command helpers (should_exit, should_clear, should_show_help) match expected strings
+  - chat_once calls the client, returns the reply, and appends both turns to history
+  - help_text includes all documented commands
+"""
+
 from __future__ import annotations
 
 import sys

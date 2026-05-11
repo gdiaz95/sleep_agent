@@ -8,3 +8,7 @@ __pycache__/
 .tools/
 .uv-cache/
 env.txt
+
+# Generated training data — produced by data_prep.py, not committed
+data/*.jsonl
+
